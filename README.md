@@ -43,7 +43,7 @@ The dashboard communicates directly with the Proxmox VE API (`/api2/json`):
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/<your-username>/<your-repo-name>.git
+git clone https://github.com/Nietch2/Proxmox-Live-Cluster-Monitor.git
 cd <your-repo-name>
 
 ```
