@@ -71,6 +71,10 @@ def get_node_telemetry(node_num):
             return response.text
     return 'Node is either offline or we failed to recieve status'
 
+def get_containers(node_num):
+    if (get_node_status(node_num) == "online"):
+        response = requests.get(f"{base_url}/nodes/{node_num}/lxc")
+
 @st.fragment(run_every="1s")
 def display_telemetry():
     node_info = get_node_telemetry(node_num)
