@@ -10,21 +10,15 @@ base_url = os.getenv("PROXMOX_URL")
 userid = os.getenv("PROXMOX_TOKEN")
 headers = {"Authorization": userid}
 
-nodes_data = requests.get(f"{base_url}/nodes", verify = False, headers = headers).json().get("data")
-num_of_nodes = len(nodes_data)
-node_names = []
-for i in range(num_of_nodes):
-    node_names.append(nodes_data[i].get("node"))
+
 
 st.set_page_config(page_title="Proxmox Monitor", layout="wide")
 st.title("Proxmox Cluster Live Monitor")
 
-def get_node_status(node_num):
+def get_node_status(node_num, response, data):
     try:
-        response = requests.get(f"{base_url}/nodes", verify = False, headers = headers)
         if response.status_code != 200:
             return "offline"
-        data = response.json().get("data")
         for node in data:
             if (node.get("node") == node_num):
                 return node.get("status", "unknown")
@@ -33,12 +27,11 @@ def get_node_status(node_num):
         return "offline"
     return "offline"
 
-def get_node_uptime(node_num):
+def get_node_uptime(node_num, response, data):
     try:
-        response = requests.get(f"{base_url}/nodes", verify = False, headers = headers)
         if response.status_code != 200:
             return "unable to fetch"
-        data = response.json().get("data")
+
         for node in data:
             if (node.get("node") == node_num):
                 node_uptime = node.get("uptime", "unknown")
@@ -64,8 +57,8 @@ def get_node_uptime(node_num):
         print(f"Error fetching uptime for {node_num}: {e}")
     return response.status_code
 
-def get_node_telemetry(node_num):
-    if(get_node_status(node_num) == 'online'):
+def get_node_telemetry(node_num, node_status_response, nodes_data):
+    if(get_node_status(node_num, node_status_response, nodes_data) == 'online'):
         response = requests.get(f"{base_url}/nodes/{node_num}/status", verify = False, headers = headers, timeout = 5)
         if response.status_code != 200:
             return "unable to fetch"
@@ -75,8 +68,8 @@ def get_node_telemetry(node_num):
             return response.text
     return 'Node is either offline or we failed to recieve status'
 
-def get_containers(node_num):
-    if (get_node_status(node_num) == "online"):
+def get_containers(node_num, node_status_response, nodes_data):
+    if (get_node_status(node_num, node_status_response, nodes_data) == "online"):
         response = requests.get(f"{base_url}/nodes/{node_num}/lxc")
         if (response.status_code != 200):
             return "unable to fetch"
@@ -88,13 +81,20 @@ def get_containers(node_num):
 
 @st.fragment(run_every="1s")
 def display_telemetry():
+    nodes_response = requests.get(f"{base_url}/nodes", verify = False, headers = headers)
+    nodes_data = nodes_response.json().get("data")
+    num_of_nodes = len(nodes_data)
+    node_names = []
+    for i in range(num_of_nodes):
+        node_names.append(nodes_data[i].get("node"))
+
     nodes = []
     for i in range(num_of_nodes):
-        nodes.append(get_node_telemetry(node_names[i])["data"])
+        nodes.append(get_node_telemetry(node_names[i], nodes_response, nodes_data)["data"])
 
     node_uptimes = []
     for i in range(num_of_nodes):
-        node_uptimes.append(get_node_uptime(node_names[i]))
+        node_uptimes.append(get_node_uptime(node_names[i], nodes_response, nodes_data))
 
     node_cpu_usages = []
     for i in range(num_of_nodes):
